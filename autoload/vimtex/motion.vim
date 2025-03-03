@@ -135,6 +135,13 @@ endfunction
 
 " }}}1
 function! vimtex#motion#section(type, backwards, visual) abort " {{{1
+  let l:re = (expand('%:e') !=# 'dtx'
+        \ ? '\v^\s*\\%('
+        \ : '\v^\%?\s*\\%(')
+        \ .. s:re_sec .. ')>'
+  let l:re_t1 = '\v%(' .. l:re .. '|^\s*%(\\end\{document\}|%$))'
+  let l:re_t2 = '\v%(' .. l:re .. '|^\s*\\end\{document\})'
+
   let l:count = v:count1
   if a:visual
     normal! gv
@@ -144,8 +151,8 @@ function! vimtex#motion#section(type, backwards, visual) abort " {{{1
   normal! m`
 
   " Check trivial cases
-  let l:top = search(s:re_sec, 'nbW') == 0
-  let l:bottom = search(a:type == 1 ? s:re_sec_t2 : s:re_sec, 'nW') == 0
+  let l:top = search(l:re, 'nbW') == 0
+  let l:bottom = search(a:type == 1 ? l:re_t2 : l:re, 'nW') == 0
   if a:backwards && l:top
     return vimtex#pos#set_cursor([1, 1])
   elseif !a:backwards && l:bottom
@@ -153,7 +160,7 @@ function! vimtex#motion#section(type, backwards, visual) abort " {{{1
   endif
 
   " Define search pattern and search flag
-  let l:re = a:type == 0 ? s:re_sec : s:re_sec_t1
+  let l:re = a:type == 0 ? l:re : l:re_t1
   let l:flags = 'W'
   if a:backwards
     let l:flags .= 'b'
@@ -166,12 +173,12 @@ function! vimtex#motion#section(type, backwards, visual) abort " {{{1
       call search('\S', 'W')
     endif
 
-    let l:bottom = search(s:re_sec_t2, 'nW') == 0
+    let l:bottom = search(l:re_t2, 'nW') == 0
     if a:type == 1 && !a:backwards && l:bottom
       return vimtex#pos#set_cursor([line('$'), 1])
     endif
 
-    let l:top = search(s:re_sec, 'ncbW') == 0
+    let l:top = search(l:re, 'ncbW') == 0
     let l:lnum = search(l:re, l:flags)
 
     if l:top && l:lnum > 0 && a:type == 1 && !a:backwards
@@ -182,7 +189,7 @@ function! vimtex#motion#section(type, backwards, visual) abort " {{{1
       call search('\S\s*\n\zs', 'Wb')
 
       " Move to start of file if cursor was moved to top part of document
-      if search(s:re_sec, 'ncbW') == 0
+      if search(l:re, 'ncbW') == 0
         call vimtex#pos#set_cursor([1, 1])
       endif
     endif
@@ -190,17 +197,15 @@ function! vimtex#motion#section(type, backwards, visual) abort " {{{1
 endfunction
 
 " Patterns to match section/chapter/...
-let s:re_sec = '\v^\s*\\%(' . join([
-      \   '%(sub)?paragraph',
-      \   '%(sub)*section',
-      \   'chapter',
-      \   'part',
-      \   'appendi%(x|ces)',
-      \   '%(front|back|main)matter',
-      \   'add%(sec|chap|part)',
-      \ ], '|') . ')>'
-let s:re_sec_t1 = '\v%(' . s:re_sec . '|^\s*%(\\end\{document\}|%$))'
-let s:re_sec_t2 = '\v%(' . s:re_sec . '|^\s*\\end\{document\})'
+let s:re_sec = join([
+      \ '%(sub)?paragraph',
+      \ '%(sub)*section',
+      \ 'chapter',
+      \ 'part',
+      \ 'appendi%(x|ces)',
+      \ '%(front|back|main)matter',
+      \ 'add%(sec|chap|part)',
+      \ ], '|')
 
 " }}}1
 function! vimtex#motion#environment(begin, backwards, visual) abort " {{{1
